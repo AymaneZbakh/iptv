@@ -1,0 +1,6 @@
+{
+  "name": "IPTV Player",
+  "description": "A high-performance IPTV player with rapid M3U parsing, EPG guides, and a custom player designed with the signature aesthetic, OSD, and controls of the MPV player.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

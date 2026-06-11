@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+release/
+
+# MPV binary (downloaded by CI, not committed)
+mpv-bin/*.exe
+mpv-bin/*.dll
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# AI Studio
+assets/.aistudio/
