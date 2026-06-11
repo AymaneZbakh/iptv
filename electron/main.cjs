@@ -3,7 +3,13 @@
  * Hosts the Express/Vite backend + spawns MPV for native playback
  */
 
-const { app, BrowserWindow, ipcMain, shell, dialog, Menu, Tray } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, Menu } = require('electron');
+
+// Prevent multiple instances of the app
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+  process.exit(0);
+}
 const path = require('path');
 const { spawn, execFile } = require('child_process');
 const fs = require('fs');
@@ -229,6 +235,8 @@ ipcMain.handle('dialog:showMpvMissing', async () => {
 
 // ─── App Lifecycle ────────────────────────────────────────────────────────────
 
+let isCreatingWindow = false;
+
 app.whenReady().then(async () => {
   if (!isDev) {
     try {
@@ -241,8 +249,18 @@ app.whenReady().then(async () => {
   await createWindow();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0 && !isCreatingWindow) {
+      isCreatingWindow = true;
+      createWindow().finally(() => { isCreatingWindow = false; });
+    }
   });
+});
+
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
 });
 
 app.on('window-all-closed', () => {
