@@ -1,0 +1,106 @@
+name: Build Windows Installer
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. v1.0.0)'
+        required: false
+        default: 'v1.0.0'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download MPV for Windows (bundled binary)
+        shell: pwsh
+        run: |
+          # Create mpv-bin directory
+          New-Item -ItemType Directory -Force -Path "mpv-bin"
+
+          # Download latest mpv Windows build from mpv.io / GitHub releases
+          $mpvUrl = "https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20240901/mpv-x86_64-20240901-git-38c0ae5.7z"
+          $sevenZipUrl = "https://www.7-zip.org/a/7zr.exe"
+
+          Write-Host "Downloading MPV..."
+          try {
+            Invoke-WebRequest -Uri $mpvUrl -OutFile "mpv.7z" -TimeoutSec 120
+            
+            # Download 7zr for extraction
+            Invoke-WebRequest -Uri $sevenZipUrl -OutFile "7zr.exe" -TimeoutSec 30
+            
+            # Extract
+            & ".\7zr.exe" e "mpv.7z" -o"mpv-extract" -y
+            
+            # Find and copy mpv.exe
+            $mpvExe = Get-ChildItem -Path "mpv-extract" -Filter "mpv.exe" -Recurse | Select-Object -First 1
+            if ($mpvExe) {
+              Copy-Item $mpvExe.FullName "mpv-bin\mpv.exe"
+              Write-Host "MPV bundled successfully: $($mpvExe.FullName)"
+            } else {
+              Write-Host "WARNING: mpv.exe not found in archive, building without bundled MPV"
+            }
+          } catch {
+            Write-Host "WARNING: Could not download MPV automatically: $_"
+            Write-Host "Building without bundled MPV - users will need to install MPV separately"
+            # Create a placeholder so electron-builder doesn't fail on missing dir
+            New-Item -ItemType File -Force -Path "mpv-bin\.gitkeep"
+          }
+
+      - name: Build Vite frontend
+        run: npm run build
+
+      - name: Build Electron Windows installer
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win --x64 --publish=never
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MPV-IPTV-Player-Windows
+          path: release/*.exe
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*.exe
+          name: MPV IPTV Player ${{ github.ref_name }}
+          body: |
+            ## MPV IPTV Player ${{ github.ref_name }}
+
+            ### Download
+            Download the `.exe` installer below and run it on Windows.
+
+            ### What's included
+            - Full IPTV player with HLS/MPEG-TS web player
+            - Native MPV integration (bundled mpv.exe)
+            - EPG guide support
+            - M3U playlist manager
+            - Favorites, recents, search, category filters
+
+            ### MPV Note
+            If MPV is not bundled in this release, download it from https://mpv.io/installation/
+            and place `mpv.exe` in your PATH or in the `mpv-bin` folder next to the app.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
