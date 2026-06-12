@@ -5,7 +5,6 @@
 
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import http from "http";
 import https from "https";
 import {
@@ -98,6 +97,7 @@ async function startServer() {
   // Static files / Vite middleware
   if (process.env.NODE_ENV !== "production") {
     console.log("[IPTV Engine] Mounting Vite development middleware...");
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
