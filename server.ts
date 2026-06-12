@@ -105,7 +105,7 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     console.log("[IPTV Engine] Serving production static files...");
-    const distPath = path.join(process.cwd(), "dist", "renderer");
+    const distPath = path.join(__dirname, "renderer");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
