@@ -48,7 +48,9 @@
     "copyright": "Copyright © 2025",
     "files": [
       "dist/**/*",
-      "electron/**/*"
+      "electron/**/*",
+      "node_modules/**/*",
+      "package.json"
     ],
     "extraResources": [
       {
